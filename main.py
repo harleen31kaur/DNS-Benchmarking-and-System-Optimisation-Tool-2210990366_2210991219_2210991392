@@ -3,7 +3,7 @@ from tkinter import ttk, messagebox, filedialog
 import socket
 import threading
 import time
-import platformsas
+import platform
 import subprocess
 import ctypes
 import os
@@ -12,6 +12,8 @@ import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas as pdf_canvas
+import matplotlib
+matplotlib.use("TkAgg")
 
 DEFAULT_DNS_SERVERS = {
     'Google': '8.8.8.8',
@@ -53,6 +55,15 @@ THEMES = {
         'axis_color': 'black'
     }
 }
+
+import platform
+
+os_name = platform.system()
+
+if os_name == "Darwin":
+    print("Running on macOS")
+elif os_name == "Windows":
+    print("Running on Windows")
 
 def is_admin():
     """Check if the program is running with admin privileges"""
