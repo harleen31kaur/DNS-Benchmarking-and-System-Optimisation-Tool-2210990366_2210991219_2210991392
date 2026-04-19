@@ -81,7 +81,8 @@ class DNSApp:
         tk.Label(self.sidebar, text="CONTROL PANEL", font=("Segoe UI", 10, "bold")).pack(pady=10)
 
         tk.Button(self.sidebar, text="Analyze", command=self.run_analysis).pack(fill=tk.X, padx=10, pady=5)
-        tk.Button(self.sidebar, text="Live Mode", command=self.toggle_live).pack(fill=tk.X, padx=10, pady=5)
+        self.live_btn = tk.Button(self.sidebar, text="Live Mode", command=self.toggle_live)
+        self.live_btn.pack(fill=tk.X, padx=10, pady=5)
         tk.Button(self.sidebar, text="Apply Fastest DNS", command=self.apply_fastest_dns).pack(fill=tk.X, padx=10, pady=5)
 
         tk.Button(self.sidebar, text="Export PDF", command=self.export_pdf).pack(fill=tk.X, padx=10, pady=5)
@@ -234,7 +235,12 @@ class DNSApp:
     def toggle_live(self):
         self.live = not self.live
         if self.live:
+            self.live_btn.config(text="⏹ Live Mode (ON)", relief="sunken")
+            self.add_log("Live Mode: ON")
             threading.Thread(target=self._live_loop, daemon=True).start()
+        else:
+            self.live_btn.config(text="Live Mode", relief="raised")
+            self.add_log("Live Mode: OFF")
 
     def _live_loop(self):
         while self.live:
