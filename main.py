@@ -250,8 +250,12 @@ class DNSApp:
         best = min(self.results, key=lambda x: x[2])
         self.change_dns(best[1])
 
+
+##### func to change system DNS (requires admin/sudo access) - works on Windows, macOS, and Linux (with fallback message) #####
     def change_dns(self, dns_ip):
-        if platform.system() == "Windows":
+        os_name = platform.system()
+        
+        if os_name == "Windows":
             if not ctypes.windll.shell32.IsUserAnAdmin():
                 self.add_log("Requesting admin access...")
                 ctypes.windll.shell32.ShellExecuteW(
@@ -263,6 +267,43 @@ class DNSApp:
             subprocess.call(f'netsh interface ip set dns "Wi-Fi" static {dns_ip}', shell=True)
             self.add_log(f"DNS changed → {dns_ip}")
 
+        elif os_name == "Darwin":  # macOS
+            try:
+                # Get primary network service name
+                result = subprocess.run(
+                    "networksetup -listallnetworkservices | head -2 | tail -1",
+                    shell=True, capture_output=True, text=True
+                )
+                interface = result.stdout.strip()
+                
+                if interface:
+                    # Change DNS (may require sudo password prompt)
+                    subprocess.run(
+                        f"sudo networksetup -setdnsservers '{interface}' {dns_ip}",
+                        shell=True, capture_output=True
+                    )
+                    self.add_log(f"DNS changed → {dns_ip} (macOS)")
+                else:
+                    self.add_log("Error: Could not detect network interface")
+            except Exception as e:
+                self.add_log(f"Error changing DNS on macOS: {str(e)}")
+
+        elif os_name == "Linux":
+            try:
+                # Try systemd-resolved first (modern Linux)
+                subprocess.run(
+                    f"sudo resolvectl default-route --set {dns_ip}",
+                    shell=True, capture_output=True
+                )
+                self.add_log(f"DNS changed → {dns_ip} (Linux)")
+            except Exception as e:
+                # Fallback message
+                self.add_log(f"Linux: sudo access required to change DNS. Manual config needed.")
+        
+        else:
+            self.add_log(f"Unsupported OS: {os_name}")
+
+   
     # ================= EXPORT ================= #
     def export_pdf(self):
         file = filedialog.asksaveasfilename(defaultextension=".pdf")
