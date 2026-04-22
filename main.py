@@ -85,9 +85,8 @@ class DNSApp:
         self.live_btn.pack(fill=tk.X, padx=10, pady=5)
         tk.Button(self.sidebar, text="Apply Fastest DNS", command=self.apply_fastest_dns).pack(fill=tk.X, padx=10, pady=5)
 
-        tk.Button(self.sidebar, text="Export PDF", command=self.export_pdf).pack(fill=tk.X, padx=10, pady=5)
-        tk.Button(self.sidebar, text="Export CSV", command=self.export_csv).pack(fill=tk.X, padx=10, pady=5)
-        tk.Button(self.sidebar, text="Export Excel", command=self.export_excel).pack(fill=tk.X, padx=10, pady=5)
+        # ── SINGLE EXPORT BUTTON ── #
+        tk.Button(self.sidebar, text="Export", command=self.export_dialog).pack(fill=tk.X, padx=10, pady=5)
 
         tk.Button(self.sidebar, text="+ Add Custom DNS", command=self.add_dns).pack(fill=tk.X, padx=10, pady=10)
 
@@ -224,54 +223,64 @@ class DNSApp:
 
         self.canvas.draw_idle()
 
-    # ================= DNS ================= #
+    # ================= ADD DNS (FIXED BUTTON VISIBILITY) ================= #
     def add_dns(self):
-        # Create popup dialog window
+        # Determine colors based on current theme
+        if self.theme_mode == "dark":
+            dlg_bg  = "#0f172a"
+            dlg_fg  = "white"
+            entry_bg = "#1e293b"
+            entry_fg = "white"
+        else:
+            dlg_bg  = "#f3f4f6"
+            dlg_fg  = "black"
+            entry_bg = "white"
+            entry_fg = "black"
+
         dialog = tk.Toplevel(self.root)
         dialog.title("Add Custom DNS")
-        dialog.geometry("350x180")
+        dialog.geometry("350x210")
         dialog.resizable(False, False)
         dialog.grab_set()
-
-        # Center dialog on screen
         dialog.transient(self.root)
+        dialog.configure(bg=dlg_bg)
 
-        # DNS Name Label & Entry
-        tk.Label(dialog, text="DNS Name:", font=("Segoe UI", 10)).pack(pady=10, padx=10, anchor="w")
-        name_entry = tk.Entry(dialog, font=("Segoe UI", 10))
-        name_entry.pack(fill=tk.X, padx=10, pady=5)
+        tk.Label(dialog, text="DNS Name:", font=("Segoe UI", 10),
+                 bg=dlg_bg, fg=dlg_fg).pack(pady=(14, 0), padx=14, anchor="w")
+        name_entry = tk.Entry(dialog, font=("Segoe UI", 10),
+                              bg=entry_bg, fg=entry_fg, insertbackground=dlg_fg,
+                              relief="solid", bd=1)
+        name_entry.pack(fill=tk.X, padx=14, pady=4)
         name_entry.focus()
 
-        # DNS Address Label & Entry
-        tk.Label(dialog, text="DNS Address (IP):", font=("Segoe UI", 10)).pack(pady=10, padx=10, anchor="w")
-        addr_entry = tk.Entry(dialog, font=("Segoe UI", 10))
-        addr_entry.pack(fill=tk.X, padx=10, pady=5)
+        tk.Label(dialog, text="DNS Address (IP):", font=("Segoe UI", 10),
+                 bg=dlg_bg, fg=dlg_fg).pack(pady=(8, 0), padx=14, anchor="w")
+        addr_entry = tk.Entry(dialog, font=("Segoe UI", 10),
+                              bg=entry_bg, fg=entry_fg, insertbackground=dlg_fg,
+                              relief="solid", bd=1)
+        addr_entry.pack(fill=tk.X, padx=14, pady=4)
 
-        # Button frame
-        btn_frame = tk.Frame(dialog)
-        btn_frame.pack(pady=15)
+        btn_frame = tk.Frame(dialog, bg=dlg_bg)
+        btn_frame.pack(pady=16)
 
         def save_dns():
             name = name_entry.get().strip()
             addr = addr_entry.get().strip()
-            
             if not name or not addr:
                 self.add_log("Error: Both name and address required")
                 return
-            
-            # Add DNS to dictionary
             self.dns[name] = addr
             self.add_log(f"DNS Added: {name} → {addr}")
             dialog.destroy()
-            
-            # Run analysis immediately
             self.run_analysis()
 
-        # OK Button
-        tk.Button(btn_frame, text="OK", command=save_dns, width=10, bg="#10b981", fg="white").pack(side=tk.LEFT, padx=5)
-        
-        # Cancel Button
-        tk.Button(btn_frame, text="Cancel", command=dialog.destroy, width=10).pack(side=tk.LEFT, padx=5)
+        tk.Button(btn_frame, text="OK", command=save_dns, width=10,
+                  bg="#10b981", fg="white", activebackground="#059669",
+                  activeforeground="white", relief="flat").pack(side=tk.LEFT, padx=6)
+
+        tk.Button(btn_frame, text="Cancel", command=dialog.destroy, width=10,
+                  bg="#ef4444", fg="white", activebackground="#dc2626",
+                  activeforeground="white", relief="flat").pack(side=tk.LEFT, padx=6)
 
     # ================= LIVE ================= #
     def toggle_live(self):
@@ -317,7 +326,6 @@ class DNSApp:
 
         elif os_name == "Darwin":  # macOS
             try:
-                # Get primary network service name
                 result = subprocess.run(
                     "networksetup -listallnetworkservices | head -2 | tail -1",
                     shell=True, capture_output=True, text=True
@@ -325,7 +333,6 @@ class DNSApp:
                 interface = result.stdout.strip()
                 
                 if interface:
-                    # Change DNS (may require sudo password prompt)
                     subprocess.run(
                         f"sudo networksetup -setdnsservers '{interface}' {dns_ip}",
                         shell=True, capture_output=True
@@ -338,20 +345,60 @@ class DNSApp:
 
         elif os_name == "Linux":
             try:
-                # Try systemd-resolved first (modern Linux)
                 subprocess.run(
                     f"sudo resolvectl default-route --set {dns_ip}",
                     shell=True, capture_output=True
                 )
                 self.add_log(f"DNS changed → {dns_ip} (Linux)")
             except Exception as e:
-                # Fallback message
                 self.add_log(f"Linux: sudo access required to change DNS. Manual config needed.")
         
         else:
             self.add_log(f"Unsupported OS: {os_name}")
 
-   
+    # ================= EXPORT DIALOG ================= #
+    def export_dialog(self):
+        if self.theme_mode == "dark":
+            dlg_bg = "#0f172a"
+            dlg_fg = "white"
+            btn_bg = "#1e293b"
+            btn_fg = "white"
+            btn_active = "#334155"
+        else:
+            dlg_bg = "#f3f4f6"
+            dlg_fg = "black"
+            btn_bg = "#e5e7eb"
+            btn_fg = "black"
+            btn_active = "#d1d5db"
+
+        dialog = tk.Toplevel(self.root)
+        dialog.title("Export As")
+        dialog.geometry("280x210")
+        dialog.resizable(False, False)
+        dialog.grab_set()
+        dialog.transient(self.root)
+        dialog.configure(bg=dlg_bg)
+
+        tk.Label(dialog, text="Choose Export Format", font=("Segoe UI", 11, "bold"),
+                 bg=dlg_bg, fg=dlg_fg).pack(pady=(18, 12))
+
+        btn_cfg = dict(width=18, font=("Segoe UI", 10), relief="flat",
+                       bg=btn_bg, fg=btn_fg, activebackground=btn_active,
+                       activeforeground=btn_fg, cursor="hand2")
+
+        def do_export(fmt):
+            dialog.destroy()
+            if fmt == "pdf":
+                self.export_pdf()
+            elif fmt == "csv":
+                self.export_csv()
+            elif fmt == "excel":
+                self.export_excel()
+
+        tk.Button(dialog, text="📄  PDF", command=lambda: do_export("pdf"),   **btn_cfg).pack(pady=5)
+        tk.Button(dialog, text="📊  CSV", command=lambda: do_export("csv"),   **btn_cfg).pack(pady=5)
+        tk.Button(dialog, text="📗  Excel (.xlsx)", command=lambda: do_export("excel"), **btn_cfg).pack(pady=5)
+
     # ================= EXPORT ================= #
     def export_pdf(self):
         file = filedialog.asksaveasfilename(defaultextension=".pdf")
