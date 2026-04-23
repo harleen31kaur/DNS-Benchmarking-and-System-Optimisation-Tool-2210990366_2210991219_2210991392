@@ -120,7 +120,7 @@ class DNSApp:
         self.topbar = ttk.Frame(self.root, style='Card.TFrame')
         self.topbar.grid(row=0, column=0, columnspan=2, sticky="nsew")
 
-        self.title = ttk.Label(self.topbar, text="DNS ENTERPRISE ANALYZER", style='Title.TLabel')
+        self.title = ttk.Label(self.topbar, text="DNS ANALYZER", style='Title.TLabel')
         self.title.pack(side=tk.LEFT, padx=15)
 
         # ── TWO SIDE-BY-SIDE THEME TOGGLE BUTTONS ── #
