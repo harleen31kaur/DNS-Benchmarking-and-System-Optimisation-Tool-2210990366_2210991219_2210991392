@@ -92,9 +92,7 @@ class DNSApp:
                            font=('Segoe UI', 11, 'bold'),
                            background='#f3f4f6')
 
-        self.style.configure('Status.TLabel',
-                           font=('Segoe UI', 9),
-                           background='#f3f4f6')
+        # ── REMOVED Status.TLabel (no longer used) ── #
 
         # Treeview styles
         self.style.configure('Treeview',
@@ -103,6 +101,14 @@ class DNSApp:
 
         self.style.configure('Treeview.Heading',
                            font=('Segoe UI', 10, 'bold'))
+
+        # Theme toggle button styles
+        self.style.configure('ThemeDark.TButton',
+                           font=('Segoe UI', 9, 'bold'),
+                           padding=5)
+        self.style.configure('ThemeLight.TButton',
+                           font=('Segoe UI', 9, 'bold'),
+                           padding=5)
 
     # ================= UI ================= #
     def build_ui(self):
@@ -117,11 +123,12 @@ class DNSApp:
         self.title = ttk.Label(self.topbar, text="DNS ENTERPRISE ANALYZER", style='Title.TLabel')
         self.title.pack(side=tk.LEFT, padx=15)
 
-        self.status = ttk.Label(self.topbar, text="IDLE", style='Status.TLabel')
-        self.status.pack(side=tk.RIGHT, padx=15)
+        # ── TWO SIDE-BY-SIDE THEME TOGGLE BUTTONS ── #
+        self.light_btn = ttk.Button(self.topbar, text="☀  Light", command=self.set_light_theme, style='ThemeLight.TButton')
+        self.light_btn.pack(side=tk.RIGHT, padx=(0, 10))
 
-        self.theme_btn = ttk.Button(self.topbar, text="Theme", command=self.toggle_theme)
-        self.theme_btn.pack(side=tk.RIGHT, padx=5)
+        self.dark_btn = ttk.Button(self.topbar, text="🌙  Dark", command=self.set_dark_theme, style='ThemeDark.TButton')
+        self.dark_btn.pack(side=tk.RIGHT, padx=(5, 0))
 
         # SIDEBAR
         self.sidebar = ttk.Frame(self.root, width=260, style='Card.TFrame')
@@ -140,7 +147,8 @@ class DNSApp:
 
         ttk.Button(self.sidebar, text="+ Add Custom DNS", command=self.add_dns).pack(fill=tk.X, padx=10, pady=10)
 
-        self.progress = ttk.Progressbar(self.sidebar)
+        # ── PROGRESS BAR with themed style ── #
+        self.progress = ttk.Progressbar(self.sidebar, style='Vibrant.Horizontal.TProgressbar')
         self.progress.pack(fill=tk.X, padx=10, pady=10)
 
         # MAIN AREA
@@ -221,7 +229,6 @@ class DNSApp:
                 self.results = []
                 self.tree.delete(*self.tree.get_children())
                 self.fastest_label.config(text="Fastest: --")
-                self.status.config(text="IDLE")
                 self.progress["value"] = 0
 
                 if self.live:
@@ -284,7 +291,6 @@ class DNSApp:
 
         if best:
             self.fastest_label.config(text=f"Fastest: {best[0]} ({best[2]} ms)")
-            self.status.config(text="RUNNING")
 
     # ================= LOG ================= #
     def add_log(self, text):
@@ -324,7 +330,6 @@ class DNSApp:
         self.ax.set_xlabel("DNS Servers", color=text_color)
         self.ax.set_ylabel("Latency (ms)", color=text_color)
 
-        
         self.ax.tick_params(axis='x', colors=text_color, pad=-3)
         self.ax.tick_params(axis='y', colors=text_color)
 
@@ -596,6 +601,14 @@ class DNSApp:
             tree_fg = "white"
             tree_heading_bg = "#111827"
             tree_heading_fg = "white"
+            # Progress bar: vibrant cyan/electric blue for dark theme
+            progress_trough = "#1e293b"
+            progress_bar = "#38bdf8"
+            # Active theme button: highlighted; inactive: dimmed
+            dark_btn_bg = "#0ea5e9"
+            dark_btn_fg = "#0a0f1a"
+            light_btn_bg = "#374151"
+            light_btn_fg = "#94a3b8"
         else:
             # Light theme colors
             bg = "#ffffff"
@@ -608,6 +621,14 @@ class DNSApp:
             tree_fg = "black"
             tree_heading_bg = "#f9fafb"
             tree_heading_fg = "black"
+            # Progress bar: vibrant light blue for light theme
+            progress_trough = "#e5e7eb"
+            progress_bar = "#38bdf8"
+            # Active theme button: highlighted; inactive: dimmed
+            dark_btn_bg = "#e2e8f0"
+            dark_btn_fg = "#94a3b8"
+            light_btn_bg = "#38bdf8"
+            light_btn_fg = "#ffffff"
 
         # Configure ttk styles
         self.style.configure('TFrame', background=bg)
@@ -628,11 +649,6 @@ class DNSApp:
                            foreground=fg,
                            font=('Segoe UI', 11, 'bold'))
 
-        self.style.configure('Status.TLabel',
-                           background=card,
-                           foreground=fg,
-                           font=('Segoe UI', 9))
-
         # Treeview styling
         self.style.configure('Treeview',
                            background=tree_bg,
@@ -646,6 +662,28 @@ class DNSApp:
                            foreground=tree_heading_fg,
                            font=('Segoe UI', 10, 'bold'))
 
+        # ── VIBRANT PROGRESS BAR ── #
+        self.style.configure('Vibrant.Horizontal.TProgressbar',
+                           troughcolor=progress_trough,
+                           background=progress_bar,
+                           bordercolor=progress_trough,
+                           lightcolor=progress_bar,
+                           darkcolor=progress_bar,
+                           thickness=12)
+
+        # ── THEME TOGGLE BUTTONS: active vs inactive visual ── #
+        self.style.configure('ThemeDark.TButton',
+                           background=dark_btn_bg,
+                           foreground=dark_btn_fg,
+                           font=('Segoe UI', 9, 'bold'),
+                           padding=5)
+
+        self.style.configure('ThemeLight.TButton',
+                           background=light_btn_bg,
+                           foreground=light_btn_fg,
+                           font=('Segoe UI', 9, 'bold'),
+                           padding=5)
+
         # Map for interactive states
         self.style.map('TButton',
                       background=[('active', accent),
@@ -654,6 +692,12 @@ class DNSApp:
         self.style.map('Treeview',
                       background=[('selected', accent)],
                       foreground=[('selected', 'white')])
+
+        self.style.map('ThemeDark.TButton',
+                      background=[('active', "#0ea5e9")])
+
+        self.style.map('ThemeLight.TButton',
+                      background=[('active', "#38bdf8")])
 
         # Update root window background (tk widget)
         self.root.configure(bg=bg)
@@ -665,9 +709,20 @@ class DNSApp:
         # Update graph background
         self.draw_graph()
 
-        # Don't log theme changes during initialization
+    # ================= THEME SETTERS ================= #
+    def set_dark_theme(self):
+        if self.theme_mode != "dark":
+            self.theme_mode = "dark"
+            self.apply_theme()
+            self.add_log("Theme switched → dark")
 
-    # ================= THEME TOGGLE ================= #
+    def set_light_theme(self):
+        if self.theme_mode != "light":
+            self.theme_mode = "light"
+            self.apply_theme()
+            self.add_log("Theme switched → light")
+
+    # ── kept for any internal callers ── #
     def toggle_theme(self):
         self.theme_mode = "light" if self.theme_mode == "dark" else "dark"
         self.apply_theme()
