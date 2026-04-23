@@ -42,7 +42,7 @@ def ping(ip):
 class DNSApp:
     def __init__(self, root):
         self.root = root
-        self.root.title("DNS Enterprise Analyzer")
+        self.root.title("DNS Benchmarking and System Optimization Tool")
         self.root.geometry("1200x800")
         self.root.minsize(1000, 650)
 
@@ -55,6 +55,7 @@ class DNSApp:
         self.dns = DNS_SERVERS.copy()
         self.results = []
         self.live = False
+        self.analysis_running = False
         self.theme_mode = "dark"
 
         self.build_ui()
@@ -137,7 +138,7 @@ class DNSApp:
         # ── SINGLE EXPORT BUTTON ── #
         ttk.Button(self.sidebar, text="Export", command=self.export_dialog).pack(fill=tk.X, padx=10, pady=5)
 
-        ttk.Button(self.sidebar, text="+ Add Custom DNS", command=self.add_dns).pack(fill=tk.X, padx=10, pady=5)
+        ttk.Button(self.sidebar, text="+ Add Custom DNS", command=self.add_dns).pack(fill=tk.X, padx=10, pady=10)
 
         self.progress = ttk.Progressbar(self.sidebar)
         self.progress.pack(fill=tk.X, padx=10, pady=10)
@@ -168,6 +169,14 @@ class DNSApp:
 
         self.tree.pack(fill=tk.BOTH, expand=True)
 
+        # Add right-click context menu for deleting DNS entries
+        self.context_menu = tk.Menu(self.root, tearoff=0)
+        self.context_menu.add_command(label="Delete DNS", command=self.delete_selected_dns)
+
+        # Bind right-click to show context menu
+        self.tree.bind("<Button-3>", self.show_context_menu)  # macOS right-click
+        self.tree.bind("<Button-2>", self.show_context_menu)  # Alternative for some systems
+
         # GRAPH
         self.graph_frame = ttk.Frame(self.main, style='TFrame')
         self.graph_frame.grid(row=2, column=0, sticky="nsew")
@@ -176,7 +185,55 @@ class DNSApp:
         self.log = tk.Text(self.root, height=8)
         self.log.grid(row=2, column=0, columnspan=2, sticky="ew")
 
-    # ================= GRAPH ================= #
+    # ================= CONTEXT MENU ================= #
+    def show_context_menu(self, event):
+        """Show right-click context menu for DNS deletion"""
+        # Select the item under cursor
+        item = self.tree.identify_row(event.y)
+        if item:
+            self.tree.selection_set(item)
+            self.context_menu.post(event.x_root, event.y_root)
+
+    def delete_selected_dns(self):
+        """Delete the selected DNS entry"""
+        selection = self.tree.selection()
+        if not selection:
+            return
+
+        # Get the DNS name from the selected row
+        item = selection[0]
+        values = self.tree.item(item, 'values')
+        dns_name = values[0]  # First column is DNS name
+
+        # Prevent deleting the last DNS server
+        if len(self.dns) <= 1:
+            messagebox.showwarning("Cannot Delete", "At least one DNS server must remain for analysis.")
+            return
+
+        # Confirm deletion
+        if messagebox.askyesno("Confirm Delete", f"Delete DNS server '{dns_name}'?"):
+            # Remove from DNS dictionary
+            if dns_name in self.dns:
+                del self.dns[dns_name]
+                self.add_log(f"DNS Deleted: {dns_name}")
+
+                # Clear results immediately
+                self.results = []
+                self.tree.delete(*self.tree.get_children())
+                self.fastest_label.config(text="Fastest: --")
+                self.status.config(text="IDLE")
+                self.progress["value"] = 0
+
+                if self.live:
+                    self.add_log("Live mode active — refresh will occur on next cycle")
+                else:
+                    if self.dns:
+                        self.run_analysis()
+                    else:
+                        self.add_log("No DNS servers remaining")
+
+    # ================= UI CONTINUATION ================= #
+    # GRAPH
     def build_graph(self):
         self.fig = plt.Figure(figsize=(6, 3))
         self.ax = self.fig.add_subplot(111)
@@ -186,35 +243,39 @@ class DNSApp:
 
     # ================= ANALYZE ================= #
     def run_analysis(self):
-        if getattr(self, '_running', False):
+        if self.analysis_running:
             return
         threading.Thread(target=self._run, daemon=True).start()
 
     def _run(self):
-        self._running = True
-        self.tree.delete(*self.tree.get_children())
-        self.results = []
+        if self.analysis_running:
+            return
+        self.analysis_running = True
+        try:
+            self.tree.delete(*self.tree.get_children())
+            self.results = []
 
-        best = None
-        best_val = 9999
+            best = None
+            best_val = 9999
 
-        self.progress["maximum"] = len(self.dns)
+            self.progress["maximum"] = len(self.dns)
 
-        for i, (name, ip) in enumerate(self.dns.items()):
-            lat = ping(ip) or 999
-            self.results.append((name, ip, lat))
+            for i, (name, ip) in enumerate(self.dns.items()):
+                lat = ping(ip) or 999
+                self.results.append((name, ip, lat))
 
-            self.add_log(f"{name} → {lat} ms")
+                self.add_log(f"{name} → {lat} ms")
 
-            if lat < best_val:
-                best_val = lat
-                best = (name, ip, lat)
+                if lat < best_val:
+                    best_val = lat
+                    best = (name, ip, lat)
 
-            self.progress["value"] = i + 1
+                self.progress["value"] = i + 1
 
-        self.update_ui(best)
-        self.draw_graph()
-        self._running = False
+            self.update_ui(best)
+            self.draw_graph()
+        finally:
+            self.analysis_running = False
 
     # ================= UI ================= #
     def update_ui(self, best):
@@ -376,7 +437,6 @@ class DNSApp:
         ttk.Button(btn_frame, text="OK", command=save_dns).pack(side=tk.LEFT, padx=6)
         ttk.Button(btn_frame, text="Cancel", command=dialog.destroy).pack(side=tk.LEFT, padx=6)
 
-    
     # ================= LIVE ================= #
     def toggle_live(self):
         self.live = not self.live
@@ -605,7 +665,7 @@ class DNSApp:
         # Update graph background
         self.draw_graph()
 
-        self.add_log(f"Theme switched → {self.theme_mode}")
+        # Don't log theme changes during initialization
 
     # ================= THEME TOGGLE ================= #
     def toggle_theme(self):
