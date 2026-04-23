@@ -1,0 +1,37 @@
+name: Build Linux Executable
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Install Dependencies
+        run: |
+          pip install matplotlib reportlab openpyxl pyinstaller
+
+      - name: Install Tkinter (IMPORTANT for your GUI)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y python3-tk
+
+      - name: Build Executable
+        run: |
+          pyinstaller --onefile --windowed main.py
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-build
+          path: dist/main
