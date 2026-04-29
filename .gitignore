@@ -47,3 +47,21 @@ Thumbs.db
 # Excel temp files
 # =========================
 ~$*.xlsx
+
+# ========================= 
+# Executables / binaries 
+# =========================
+*.exe 
+*.app 
+*.AppImage 
+*.dmg *.deb 
+*.rpm 
+*.msi 
+*.zip 
+*.tar.gz
+
+# ========================= 
+# GitHub Actions artifacts 
+# ========================= 
+artifacts/ 
+release-builds/
