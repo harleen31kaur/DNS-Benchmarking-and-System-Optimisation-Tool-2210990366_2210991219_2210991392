@@ -1,5 +1,15 @@
 # DNS Benchmarking and System Optimization Tool
 
+## Team Details
+
+1. Akira Singh 2210991219
+2. Harleen Kaur 2210990366
+3. Aryan Thakur 2210991392
+
+Type: Copyright
+Current Status : Waiting
+---
+# Description
 A cross-platform desktop application built with Python and Tkinter to benchmark DNS servers, compare latency, monitor DNS performance in real-time, export reports, and apply the fastest DNS settings.
 
 ---
